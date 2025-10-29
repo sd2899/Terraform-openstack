@@ -88,6 +88,11 @@ resource "openstack_networking_floatingip_v2" "fips" {
   pool     = var.public_network_name
 }
 
+data "openstack_networking_port_v2" "vm_ports" {
+  for_each = var.vms
+  device_id = openstack_compute_instance_v2.instances[each.key].id
+}
+
 # --- Associate Floating IPs ---
 resource "openstack_networking_floatingip_associate_v2" "fip_assoc" {
   for_each = local.vms_with_fip
@@ -98,7 +103,7 @@ resource "openstack_networking_floatingip_associate_v2" "fip_assoc" {
   ]
 
   floating_ip = openstack_networking_floatingip_v2.fips[each.key].address
-  port_id     = openstack_compute_instance_v2.instances[each.key].network[0].port
+  port_id     = data.openstack_networking_port_v2.vm_ports[each.key].id
 }
 
 # Optionally assign Floating IPs
