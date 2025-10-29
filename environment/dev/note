@@ -1,0 +1,13 @@
+the clouds.yaml file present in ~/.config/openstack/clouds.yaml
+clouds:
+  open:
+    auth:
+      auth_url: 
+      username: ""
+      project_id: b
+      password: ""
+      project_name: ""
+      user_domain_name: "Default"
+    region_name: "RegionOne"
+    interface: ""
+    identity_api_version: 3
