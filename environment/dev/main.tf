@@ -11,3 +11,13 @@ module "dev_vm" {
   assign_floating_ip = true
   user_data         = file("../../scripts/user_data.sh")
 }
+
+resource "null_resource" "save_outputs" {
+  provisioner "local-exec" {
+    command = "mkdir -p ./output && terraform output -json > ./output/terraform-output.json"
+  }
+
+  triggers = {
+    always_run = timestamp()
+  }
+}
