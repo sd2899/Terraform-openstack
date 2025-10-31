@@ -6,15 +6,23 @@
 #  value = [for fip in openstack_networking_floatingip_v2.fips : fip.address]
 #}
 
-output "vm_ips" {
+output "instance_info" {
+  description = "Instance details"
   value = {
-    for k, v in openstack_compute_instance_v2.instances :
-    k => {
-      name        = v.name
-      private_ip  = v.network[0].fixed_ip_v4
-      public_ip   = try(openstack_networking_floatingip_v2.fips[k].address, null)
-      volume_name = openstack_blockstorage_volume_v3.boot_volumes[k].name
+    for name, instance in openstack_compute_instance_v2.instances :
+    name => {
+      id         = instance.id
+      name       = instance.name
+      private_ip = instance.network[0].fixed_ip_v4
     }
+  }
+}
+
+output "floating_ips" {
+  description = "Floating IPs for instances"
+  value = {
+    for name, fip in openstack_networking_floatingip_v2.fips :
+    name => fip.address
   }
 }
 
