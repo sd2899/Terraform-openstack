@@ -11,3 +11,4 @@ variable "network_name" {}
 variable "vm_names" {
   type = list(string)
 }
+variable "external_network" {}
