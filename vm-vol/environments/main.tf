@@ -33,22 +33,11 @@ module "centos_vms" {
 #}
 
 
-#resource "null_resource" "save_outputs" {
-#  provisioner "local-exec" {
-#    command = "mkdir -p /home/tera/openstack/terraform/vm-vol/output && terraform output -json > /home/tera/openstack/terraform/vm-vol/output/terraform-output.json"
-#  }
+output "all_vm_info" {
+  value = merge(module.ubuntu_vms.vm_info, module.centos_vms.vm_info)
+}
 
-#  triggers = {
-#    always_run = timestamp()
-#  }
-#}
-
-resource "null_resource" "save_outputs" {
-  provisioner "local-exec" {
-    command = "mkdir -p ./output && terraform output -json > ./output/terraform-output.json"
-  }
-
-  triggers = {
-    always_run = timestamp()
-  }
+resource "local_file" "vm_output" {
+  content  = jsonencode(merge(module.ubuntu_vms.vm_info, module.centos_vms.vm_info))
+  filename = "/home/tera/openstack/terraform/vm-vol/outputs/vm_info.json"
 }
