@@ -5,6 +5,7 @@ module "ubuntu_vms" {
   volume_size     = 20
   flavor          = var.flavor
   keypair         = var.keypair
+  external_network = var.external_network
   security_groups = ["default"]
   network_name    = var.network_name
   vm_names        = ["ubuntu-web1", "ubuntu-web2"]
@@ -17,6 +18,7 @@ module "centos_vms" {
   volume_size     = 20
   flavor          = var.flavor
   keypair         = var.keypair
+  external_network = var.external_network
   security_groups = ["default"]
   network_name    = var.network_name
   vm_names        = ["centos-app1"]
