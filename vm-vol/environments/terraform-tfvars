@@ -1,0 +1,5 @@
+ubuntu_image_id = "d765e941-23f4-4417-a9fb-95bcc0e39f0a"
+centos_image_id = "100d8e2b-a339-40d9-8797-5de25f43a467"
+flavor          = "m1.medium"
+keypair         = "ubuntu"
+network_name    = "demo"
