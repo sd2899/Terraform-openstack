@@ -31,9 +31,14 @@ resource "null_resource" "create_snapshot" {
   provisioner "local-exec" {
     command = <<EOT
       SNAPSHOT_NAME="${var.os_name}-base-snapshot"
-      openstack volume snapshot create --volume ${openstack_blockstorage_volume_v3.base_volume.id} "$SNAPSHOT_NAME"
+      VOL_ID=${openstack_blockstorage_volume_v3.base_volume.id}
+      STATUS=$(openstack volume snapshot list -f value -c Name | grep -x "$SNAPSHOT_NAME" || true)
+      if [ -z "$STATUS" ]; then
+        openstack volume snapshot create --volume $VOL_ID --name $SNAPSHOT_NAME
+      fi
     EOT
   }
+
 
   # Cleanup snapshot on destroy
   provisioner "local-exec" {
@@ -50,12 +55,40 @@ resource "null_resource" "create_snapshot" {
   }
 }
 
+# wait for snapshot to become available
+resource "null_resource" "wait_snapshot_available" {
+  count = var.vm_count > 1 ? 1 : 0
+  depends_on = [null_resource.create_snapshot]
+
+  provisioner "local-exec" {
+    command = <<EOT
+      SNAPSHOT_NAME="${var.os_name}-base-snapshot"
+      for i in {1..30}; do
+        STATUS=$(openstack volume snapshot show $SNAPSHOT_NAME -f value -c status)
+        if [ "$STATUS" = "available" ]; then
+          echo "Snapshot is ready!"
+          exit 0
+        fi
+        echo "Waiting for snapshot... ($i/30)"
+        sleep 10
+      done
+      echo "Snapshot did not become available in time!"
+      exit 1
+    EOT
+  }
+}
+
+
 # 4️⃣ Get snapshot info (only if snapshot created)
+#data "openstack_blockstorage_snapshot_v3" "snapshot" {
+#  name       = "${var.os_name}-base-snapshot"
+#  depends_on = [null_resource.wait_snapshot_available]
+#}
+
 data "openstack_blockstorage_snapshot_v3" "snapshot" {
-  count        = var.vm_count > 1 ? 1 : 0
-  name         = "${var.os_name}-base-snapshot"
-  most_recent  = true               # ✅ fixes multiple snapshot error
-  depends_on   = [null_resource.create_snapshot]
+  count     = var.vm_count > 1 ? 1 : 0
+  name      = "${var.os_name}-base-snapshot"
+  volume_id = openstack_blockstorage_volume_v3.base_volume.id
 }
 
 # 5️⃣ Create compute instances
@@ -79,35 +112,43 @@ resource "openstack_compute_instance_v2" "vms" {
   }
 }
 
-# 6️⃣ Assign floating IPs (optional, uncomment if needed)
-# resource "openstack_networking_floatingip_v2" "fips" {
-#   count = var.vm_count
-#   pool  = "public"
-# }
+data "openstack_networking_port_v2" "vm_port" {
+  count      = var.vm_count
+  device_id  = openstack_compute_instance_v2.vms[count.index].id
+}
 
-# resource "openstack_networking_floatingip_associate_v2" "fip_assoc" {
-#   count       = var.vm_count
-#   floating_ip = openstack_networking_floatingip_v2.fips[count.index].address
-#   instance_id = openstack_compute_instance_v2.vms[count.index].id
-# }
+#  6️⃣ Assign floating IPs (optional, uncomment if needed)
+ resource "openstack_networking_floatingip_v2" "fips" {
+   count = var.vm_count
+   pool  = "public1"
+ }
+
+ resource "openstack_networking_floatingip_associate_v2" "fip_assoc" {
+   count       = var.vm_count
+   floating_ip = openstack_networking_floatingip_v2.fips[count.index].address
+   port_id     = data.openstack_networking_port_v2.vm_port[count.index].id
+ }
 
 # 7️⃣ Delete volume after destroy
-#resource "null_resource" "delete_volume" {
-#  triggers = {
-#    volume_id = openstack_blockstorage_volume_v3.base_volume.id
-#  }
+resource "null_resource" "delete_volume" {
+  triggers = {
+    volume_id = openstack_blockstorage_volume_v3.base_volume.id
+  }
 
-#  provisioner "local-exec" {
-#    when    = destroy
-#    command = "openstack volume delete ${self.triggers.volume_id} || true"
-#  }
-#}
+  provisioner "local-exec" {
+    when    = destroy
+    command = "openstack volume delete ${self.triggers.volume_id} || true"
+  }
+}
 
 # 8️⃣ Outputs
 output "vm_names" {
   value = openstack_compute_instance_v2.vms[*].name
 }
 
+output "vm_floating_ips" {
+  value = openstack_networking_floatingip_v2.fips[*].address
+}
 # output "vm_ips" {
 #   value = openstack_networking_floatingip_v2.fips[*].address
 # }
