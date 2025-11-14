@@ -20,13 +20,17 @@ module "centos_vms" {
   volume_size  = 20
 }
 
-# Save outputs to JSON
+locals {
+  combined_outputs = {
+    ubuntu_instances = module.ubuntu_vms.instance_info
+    ubuntu_fips      = module.ubuntu_vms.floating_ips
+    centos_instances = module.centos_vms.instance_info
+    centos_fips      = module.centos_vms.floating_ips
+  }
+}
+
+# Optional local_file (recommended if you have local provider)
 resource "local_file" "terraform_output" {
-  content = jsonencode({
-    ubuntu_vm_names = module.ubuntu_vms.vm_names
-    #ubuntu_vm_ips   = module.ubuntu_vms.vm_ips
-    centos_vm_names = module.centos_vms.vm_names
-    #centos_vm_ips   = module.centos_vms.vm_ips
-  })
+  content  = jsonencode(local.combined_outputs)
   filename = "/home/tera/openstack/terraform/vm-vol11/outputs/terraform-output.json"
 }
