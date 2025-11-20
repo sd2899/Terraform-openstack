@@ -13,11 +13,16 @@ module "dev_vm" {
 }
 
 resource "null_resource" "save_outputs" {
+  depends_on = [
+    module.dev_vm,   # Ensures the module is fully created before running
+  ]
+
+  #triggers = {
+  #  always_run = timestamp()
+  #}
+
   provisioner "local-exec" {
     command = "mkdir -p ./output && terraform output -json > ./output/terraform-output.json"
   }
 
-  triggers = {
-    always_run = timestamp()
-  }
 }
