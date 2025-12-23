@@ -1,0 +1,3 @@
+This directory contains two modules: network and VM. 
+With the network module, we can create multiple networks and subnets, and attach them to a newly created router or a pre-existing route of choice. 
+With the VM module, we can create a VM booted with an image, a volume as the source image, a pre-existing volume and a snapshot of the volume of choice, and attach any number of extra volumes and network ports of choice
