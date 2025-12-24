@@ -11,24 +11,31 @@ output "floating_ips" {
 }
 
 output "vms" {
+  description = "VMs with all ports and IPs (fixed + DHCP)"
   value = {
-    for k, vm in openstack_compute_instance_v2.vms :
-    k => {
-      id     = vm.id
-      name   = vm.name
-      flavor = vm.flavor_name
+    for vm_key, vm in openstack_compute_instance_v2.vms :
+    vm_key => {
+      id   = vm.id
+      name = vm.name
 
       ports = [
         for p in openstack_networking_port_v2.ports :
         {
-          id              = p.id
-          network_id      = p.network_id
-          #fixed_ips       = p.fixed_ips
-          mac_address     = p.mac_address
+          port_id   = p.id
+          mac       = p.mac_address
+          network_id = p.network_id
+
+          fixed_ips      = p.all_fixed_ips
+#          port_ip        = length(p.fixed_ip) > 0 ? p.ip_address : null
           security_groups = p.security_group_ids
         }
         if p.device_id == vm.id
       ]
+      floating_ip = try(
+        openstack_compute_floatingip_associate_v2.assoc[vm_key].floating_ip,
+        null
+      )
+
     }
   }
 }
